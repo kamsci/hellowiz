@@ -1,5 +1,7 @@
 package com.hellowiz.api;
 
+import com.hellowiz.api.health.TemplateHealthCheck;
+import com.hellowiz.api.resources.HellowizResource;
 import io.dropwizard.core.Application;
 import io.dropwizard.core.setup.Bootstrap;
 import io.dropwizard.core.setup.Environment;
@@ -23,7 +25,17 @@ public class hellowizApplication extends Application<hellowizConfiguration> {
     @Override
     public void run(final hellowizConfiguration configuration,
                     final Environment environment) {
-        // TODO: implement application
+        // Resource - HelloWiz
+        HellowizResource resource = new HellowizResource(
+                configuration.getTemplate(),
+                configuration.getDefaultName()
+        );
+        environment.jersey().register(resource);
+        // HealthCheck - HelloWiz
+        TemplateHealthCheck healthCheck = new TemplateHealthCheck(configuration.getTemplate());
+        environment.healthChecks().register("template", healthCheck);
+
+
     }
 
 }

@@ -2,3 +2,5 @@ logging:
   level: INFO
   loggers:
     com.hellowiz.api: DEBUG
+template: Hello, %s!
+defaultName: Stranger
