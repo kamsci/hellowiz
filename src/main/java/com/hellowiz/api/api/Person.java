@@ -1,17 +1,18 @@
-package com.hellowiz.api.models;
+package com.hellowiz.api.api;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Objects;
 
 public class Person {
+    private Long id;
     private String name;
     private String email;
 
     private Person() {
         // Jackson deserialization
         //  -> indicates that this constructor is used by Jackson during the deserialization process to create an instance of the Person class from JSON data.
-        
+
         // Jackson uses reflection to create objects and populate their fields based on the JSON data it encounters.
         // When it encounters a private constructor with no arguments like this, it can create an instance of the class without needing to call a public constructor.
         // This is especially useful when you want to create immutable objects, as it allows Jackson to set the field values directly.
@@ -23,6 +24,15 @@ public class Person {
     public Person(String name, String email) {
         this.name = name;
         this.email = email;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    // MOCK used to mock creating of a model with a PK
+    public void setId(Long id) {
+        this.id = id;
     }
 
     @JsonProperty
@@ -67,8 +77,21 @@ public class Person {
     @Override
     public String toString() {
         return "Person{" +
+                "id=" + id +
                 "name='" + name + '\'' +
                 ", email='" + email + '\'' +
                 '}';
     }
+
+    public Person update(Person personChanges) {
+        // update existing person with new name or email
+        if (personChanges.getName() != null) {
+            this.name = personChanges.getName();
+        }
+        if (personChanges.getEmail() != null) {
+            this.email = personChanges.getEmail();
+        }
+        return this;
+    }
+
 }

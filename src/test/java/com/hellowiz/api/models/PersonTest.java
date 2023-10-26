@@ -1,6 +1,7 @@
 package com.hellowiz.api.models;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hellowiz.api.api.Person;
 import org.junit.Test;
 
 import static io.dropwizard.jackson.Jackson.newObjectMapper;
@@ -25,9 +26,41 @@ public class PersonTest {
     @Test
     public void deserializesFromJSON() throws Exception {
         final Person person = new Person("Betty Sue Who", "sweaty-betty@whoville.com");
-        System.out.println(person.toString());
         assertThat(
                 MAPPER.readValue(getClass().getResource("/fixtures/models/person.json"), Person.class),
                 equalTo(person));
+    }
+
+    @Test
+    public void updatePersonName() throws Exception {
+        Person existingPerson = new Person("Sam", "sam@memail.net");
+        Person nameUpdate = MAPPER.readValue(getClass().getResource("/fixtures/models/personNameUpdate.json"), Person.class);
+
+        Person updatedPerson = existingPerson.update(nameUpdate);
+        assertThat(updatedPerson.getEmail(), equalTo("sam@memail.net"));
+        assertThat(updatedPerson.getName(), equalTo("Samwell"));
+        assertThat(existingPerson, equalTo(updatedPerson));
+    }
+
+    @Test
+    public void updatePersonEmail() throws Exception {
+        Person existingPerson = new Person("Sam", "sam@memail.net");
+        Person nameUpdate = MAPPER.readValue(getClass().getResource("/fixtures/models/personEmailUpdate.json"), Person.class);
+
+        Person updatedPerson = existingPerson.update(nameUpdate);
+        assertThat(updatedPerson.getEmail(), equalTo("sam-is-cool@memail.net"));
+        assertThat(updatedPerson.getName(), equalTo("Sam"));
+        assertThat(existingPerson, equalTo(updatedPerson));
+    }
+
+    @Test
+    public void updatePersonEmpty() throws Exception {
+        Person existingPerson = new Person("Sam", "sam@memail.net");
+        Person nameUpdate = MAPPER.readValue("{}", Person.class);
+
+        Person updatedPerson = existingPerson.update(nameUpdate);
+        assertThat(updatedPerson.getEmail(), equalTo("sam@memail.net"));
+        assertThat(updatedPerson.getName(), equalTo("Sam"));
+        assertThat(existingPerson, equalTo(updatedPerson));
     }
 }
