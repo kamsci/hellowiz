@@ -1,7 +1,6 @@
-package com.hellowiz.api.models;
+package com.hellowiz.api.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hellowiz.api.api.Person;
 import org.junit.Test;
 
 import static io.dropwizard.jackson.Jackson.newObjectMapper;
