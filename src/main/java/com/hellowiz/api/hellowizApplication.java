@@ -5,6 +5,7 @@ import com.hellowiz.api.health.ResourceHealthCheck;
 import com.hellowiz.api.health.TemplateHealthCheck;
 import com.hellowiz.api.resources.HellowizResource;
 import com.hellowiz.api.resources.PersonResource;
+import com.hellowiz.api.resources.middleware.CustomExceptionMapper;
 import io.dropwizard.core.Application;
 import io.dropwizard.core.setup.Bootstrap;
 import io.dropwizard.core.setup.Environment;
@@ -45,6 +46,10 @@ public class hellowizApplication extends Application<hellowizConfiguration> {
         // HealthCheck - Persons
         ResourceHealthCheck personResourceHealthCheck = new ResourceHealthCheck(personResource);
         environment.healthChecks().register("personResource", personResourceHealthCheck);
+
+        // Resource Middleware - catch and log Exceptions then return standardized error response
+        environment.jersey().register(CustomExceptionMapper.class);
+
     }
 
 }

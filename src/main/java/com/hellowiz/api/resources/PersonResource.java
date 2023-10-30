@@ -6,6 +6,8 @@ import com.hellowiz.api.db.PersonDAO;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.List;
@@ -14,6 +16,8 @@ import java.util.Optional;
 @Path("/persons")
 @Produces(MediaType.APPLICATION_JSON)
 public class PersonResource {
+    private static final Logger LOGGER = LoggerFactory.getLogger(PersonResource.class);
+
     final PersonDAO personDAO;
     public PersonResource(PersonDAO personDAO) {
         this.personDAO = personDAO;
@@ -22,8 +26,8 @@ public class PersonResource {
     @GET
     @Timed
     public Response getPersons(@QueryParam("email") String email) {
-
         if (email != null) {
+            LOGGER.info("getting person for email {}", email);
             Person foundPerson = personDAO.findByEmail(email);
             if (foundPerson == null) {
                 return Response.status(Response.Status.NOT_FOUND)
@@ -96,7 +100,7 @@ public class PersonResource {
                     .entity(ERROR_ID_NOT_FOUND)
                     .build();
         }
-z
+
         // Perform Update
         Person personChanges = person.get();
         Person updatedPerson = personDAO.updateById(personId, personChanges.getName(), personChanges.getEmail());
@@ -126,15 +130,13 @@ z
     }
 
     private boolean missingName(Optional<Person> person) {
-        return person.map(Person::getName)
-                .filter(n -> n != null)
+        return person.isPresent() && person.map(Person::getName)
                 .filter(n -> !n.isEmpty())
                 .isEmpty();
     }
 
     private boolean missingEmail(Optional<Person> person) {
-        return person.map(Person::getEmail)
-                .filter(e -> e != null)
+        return person.isPresent() && person.map(Person::getEmail)
                 .filter(e -> !e.isEmpty())
                 .isEmpty();
     }

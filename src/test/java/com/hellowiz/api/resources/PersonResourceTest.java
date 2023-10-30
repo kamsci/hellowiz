@@ -1,7 +1,9 @@
 package com.hellowiz.api.resources;
 
+import com.hellowiz.api.api.ErrorResponse;
 import com.hellowiz.api.api.Person;
 import com.hellowiz.api.db.PersonDAO;
+import com.hellowiz.api.resources.middleware.CustomExceptionMapper;
 import io.dropwizard.testing.junit5.DropwizardExtensionsSupport;
 import io.dropwizard.testing.junit5.ResourceExtension;
 import jakarta.ws.rs.client.Entity;
@@ -30,6 +32,7 @@ public class PersonResourceTest {
     private static final PersonDAO DAO = mock(PersonDAO.class);
     private static final ResourceExtension EXT = ResourceExtension.builder()
             .addResource(new PersonResource(DAO))
+            .addProvider(CustomExceptionMapper.class)
             .build();
     private Person person;
 
@@ -112,6 +115,21 @@ public class PersonResourceTest {
                 equalTo(Response.Status.NOT_FOUND.getStatusCode())
         );
         verify(DAO).findByEmail("not@found.net");
+    }
+
+    @Test
+    void getPerson_DBError() {
+        when(DAO.findByEmail(testEmail)).thenThrow(new RuntimeException("database unavailable"));
+
+        Response response = EXT.target("/persons")
+                .queryParam("email", testEmail)
+                .request().get();
+        assertThat(response.getStatus(), equalTo(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode()));
+
+        ErrorResponse body = response.readEntity(ErrorResponse.class);
+        assertThat(body.getError(), equalTo("database unavailable"));
+
+        verify(DAO).findByEmail(testEmail);
     }
 
     @Test
@@ -222,7 +240,7 @@ public class PersonResourceTest {
     void updatePersonBadRequest_Body() {
         final Response response = EXT.target("/persons/" + testId)
                 .request()
-                .put(Entity.entity(new Person("", ""), MediaType.APPLICATION_JSON_TYPE));
+                .put(Entity.entity(new Person(null, null), MediaType.APPLICATION_JSON_TYPE));
 
         assertThat(response.getStatus(), equalTo(Response.Status.BAD_REQUEST.getStatusCode()));
 
