@@ -2,31 +2,37 @@ package com.hellowiz.api.db;
 
 import com.hellowiz.api.api.Person;
 import org.jdbi.v3.sqlobject.customizer.Bind;
+import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
 import java.util.List;
 
+/*
+    Interface to use JDBI’s SQL Objects API, which allows you to write DAO classes as interfaces
+    https://www.dropwizard.io/en/stable/manual/jdbi3.html
+ */
 public interface PersonDAO {
-    @SqlUpdate("create table person (id int primary key, name varchar(100)), email varchar(300))")
+    @SqlUpdate("CREATE TABLE persons (id SERIAL PRIMARY KEY, name VARCHAR(100) NOT NULL, email varchar(100) UNIQUE NOT NULL)")
     void createTable();
 
-    @SqlUpdate("insert into values (:id, :name, :email)")
-    Person insert(@Bind("name") String name, @Bind("email") String email);
+    @SqlUpdate("INSERT INTO persons (name, email) values (:name, :email)")
+    @GetGeneratedKeys("id")
+    int insert(@Bind("name") String name, @Bind("email") String email);
 
-    @SqlQuery("select person from table where id = :id and insert new values (:name, :email)")
-    Person updateById(@Bind("id") long id, @Bind("name") String name, @Bind("email") String email);
-    @SqlQuery("select person from table where id = :id")
+    @SqlUpdate("UPDATE persons SET name = :name, email = :email WHERE id = :id")
+    int updateById(@Bind("id") long id, @Bind("name") String name, @Bind("email") String email);
+    @SqlQuery("SELECT * FROM persons WHERE id = :id")
     Person findById(@Bind("id") long id);
 
-    @SqlQuery("select person from table where email = :email")
+    @SqlQuery("SELECT * FROM persons WHERE email = :email")
     Person findByEmail(@Bind("email") String email);
 
-    @SqlQuery("select all persons from table")
+    @SqlQuery("SELECT * FROM persons")
     List<Person> findAll();
 
-    @SqlQuery("select all from table where id = :id")
-    Person deleteById(@Bind("id") long id);
+    @SqlUpdate("DELETE FROM persons WHERE id = :id")
+    int deleteById(@Bind("id") int id);
 
     boolean isConnected();
 }

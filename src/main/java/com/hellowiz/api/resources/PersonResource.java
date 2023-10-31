@@ -27,7 +27,6 @@ public class PersonResource {
     @Timed
     public Response getPersons(@QueryParam("email") String email) {
         if (email != null) {
-            LOGGER.info("getting person for email {}", email);
             Person foundPerson = personDAO.findByEmail(email);
             if (foundPerson == null) {
                 return Response.status(Response.Status.NOT_FOUND)
@@ -66,10 +65,9 @@ public class PersonResource {
             if (newPerson.getName() != null && !newPerson.getName().isEmpty()
                     && newPerson.getEmail() != null && !newPerson.getEmail().isEmpty()
             ) {
-                Person insertedPerson = personDAO.insert(newPerson.getName(), newPerson.getEmail());
+                personDAO.insert(newPerson.getName(), newPerson.getEmail());
 
                 return Response.status(Response.Status.CREATED)
-                        .entity(insertedPerson)
                         .build();
             }
         }
@@ -103,15 +101,15 @@ public class PersonResource {
 
         // Perform Update
         Person personChanges = person.get();
-        Person updatedPerson = personDAO.updateById(personId, personChanges.getName(), personChanges.getEmail());
+        int updated = personDAO.updateById(personId, personChanges.getName(), personChanges.getEmail());
         return Response.status(Response.Status.OK)
-                .entity(updatedPerson)
+                .entity(updated)
                 .build();
     }
 
     @DELETE
     @Path("/{personId}")
-    public Response deletePerson(@PathParam("personId") Optional<Long> personId) {
+    public Response deletePerson(@PathParam("personId") Optional<Integer> personId) {
         // Validate person id and person exists
         if (personId.isEmpty() || personId.get() <= 0) {
             return Response.status(Response.Status.BAD_REQUEST)
@@ -119,9 +117,8 @@ public class PersonResource {
                     .build();
         }
 
-        Person deletedPerson = personDAO.deleteById(personId.get());
+        personDAO.deleteById(personId.get());
         return Response.status(Response.Status.OK)
-                .entity(deletedPerson)
                 .build();
     }
 

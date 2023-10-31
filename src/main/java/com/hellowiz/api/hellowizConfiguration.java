@@ -1,12 +1,28 @@
 package com.hellowiz.api;
 
-import io.dropwizard.core.Configuration;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.dropwizard.core.Configuration;
+import io.dropwizard.db.DataSourceFactory;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
-import org.hibernate.validator.constraints.*;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.NotNull;
+
 
 public class hellowizConfiguration extends Configuration {
+
+    @Valid
+    @NotNull
+    private DataSourceFactory database = new DataSourceFactory();
+
+    @JsonProperty("database")
+    public void setDataSourceFactory(DataSourceFactory factory) {
+        this.database = factory;
+    }
+
+    @JsonProperty("database")
+    public DataSourceFactory getDataSourceFactory() {
+        return database;
+    }
     //  Vary how api says hello from environment to environment.
     //  Specify at least two things:
     //      a template for saying hello

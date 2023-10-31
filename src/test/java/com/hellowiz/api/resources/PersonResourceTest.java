@@ -26,7 +26,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(DropwizardExtensionsSupport.class)
 public class PersonResourceTest {
-    private final long testId = 1L;
+    private final int testId = 1;
     private final String testName = "Sam";
     private final String testEmail = "sam@test.com";
     private static final PersonDAO DAO = mock(PersonDAO.class);
@@ -134,20 +134,12 @@ public class PersonResourceTest {
 
     @Test
     void addPersonSuccess() {
-        when(DAO.insert(eq(testName), eq(testEmail))).thenReturn(person);
-
         final Response response = EXT.target("/persons")
                 .request()
                 .post(Entity.entity(new Person(testName, testEmail), MediaType.APPLICATION_JSON_TYPE));
 
         assertThat(response.getStatus(), equalTo(Response.Status.CREATED.getStatusCode()));
 
-        Person created = response.readEntity(Person.class);
-
-        assertThat(created, is(notNullValue()));
-        assertThat(created.getName(), equalTo(testName));
-        assertThat(created.getEmail(), equalTo(testEmail));
-        assertThat(created.getId(), equalTo(testId));
         verify(DAO).insert(testName, testEmail);
     }
 
@@ -218,7 +210,7 @@ public class PersonResourceTest {
         updatedPerson.setName(updatedName);
 
         when(DAO.findById(eq(testId))).thenReturn(person);
-        when(DAO.updateById(eq(testId), eq(updatedName), eq(""))).thenReturn(updatedPerson);
+        when(DAO.updateById(eq(testId), eq(updatedName), eq(""))).thenReturn(1);
 
         final Response response = EXT.target("/persons/" + testId)
                 .request()
@@ -226,12 +218,9 @@ public class PersonResourceTest {
 
         assertThat(response.getStatus(), equalTo(Response.Status.OK.getStatusCode()));
 
-        Person updated = response.readEntity(Person.class);
+        int updated = response.readEntity(Integer.class);
 
-        assertThat(updated, is(notNullValue()));
-        assertThat(updated.getName(), equalTo(updatedName));
-        assertThat(updated.getEmail(), equalTo(testEmail));
-        assertThat(updated.getId(), equalTo(testId));
+        assertThat(updated, equalTo(1));
         verify(DAO).findById(eq(testId));
         verify(DAO).updateById(eq(testId), eq(updatedName), eq(""));
     }
@@ -287,19 +276,11 @@ public class PersonResourceTest {
 
     @Test
     void deletePersonSuccess() {
-        when(DAO.deleteById(eq(testId))).thenReturn(person);
-
         final Response response = EXT.target("/persons/" + testId)
                 .request().delete();
 
         assertThat(response.getStatus(), equalTo(Response.Status.OK.getStatusCode()));
 
-        Person deleted = response.readEntity(Person.class);
-
-        assertThat(deleted, is(notNullValue()));
-        assertThat(deleted.getName(), equalTo(testName));
-        assertThat(deleted.getEmail(), equalTo(testEmail));
-        assertThat(deleted.getId(), equalTo(testId));
         verify(DAO).deleteById(eq(testId));
     }
 

@@ -6,14 +6,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class PersonInMemory implements PersonDAO {
-    private final AtomicLong counter;
+    private final AtomicInteger counter;
 
-    private final HashMap<Long, Person> mockDB;
+    private final HashMap<Integer, Person> mockDB;
     public PersonInMemory() {
-        this.counter = new AtomicLong();
+        this.counter = new AtomicInteger();
         this. mockDB = new HashMap<>();
 
         createTable();
@@ -34,22 +34,22 @@ public class PersonInMemory implements PersonDAO {
     }
 
     @Override
-    public Person insert(String name, String email) {
+    public int insert(String name, String email) {
         Person newPerson = new Person(name, email);
         newPerson.setId(counter.incrementAndGet());
         mockDB.put(newPerson.getId(), newPerson);
-        return newPerson;
+        return newPerson.getId();
     }
 
     @Override
-    public Person updateById(long id, String name, String email) {
+    public int updateById(long id, String name, String email) {
         if (mockDB.containsKey(id)) {
             Person existingPerson = mockDB.get(id);
             Person personChanges = new Person(name, email);
             existingPerson.update(personChanges);
-            return existingPerson;
+            return 1;
         }
-        return null;
+        return 0;
     }
 
     @Override
@@ -75,17 +75,18 @@ public class PersonInMemory implements PersonDAO {
     }
 
     @Override
-    public Person deleteById(long id) {
+    public int deleteById(int id) {
         if (mockDB.containsKey(id)) {
             Person person = mockDB.get(id);
             mockDB.remove(id);
-            return person;
+            return 1;
         }
-        return null;
+        return 0;
     }
 
     @Override
     public boolean isConnected() {
         return this.counter != null && this.mockDB != null;
     }
+
 }

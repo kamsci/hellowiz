@@ -19,6 +19,6 @@ public class CustomExceptionMapper implements ExceptionMapper<Throwable> {
     }
 
     private void logException(Throwable exception) {
-        LoggerFactory.getLogger(exception.getClass()).error("An error occurred", exception);
+        LoggerFactory.getLogger(exception.getClass()).error("Resource Error Occurred:", exception);
     }
 }

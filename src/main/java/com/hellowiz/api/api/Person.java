@@ -5,8 +5,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Objects;
 
 public class Person {
-    private Long id;
+    private Integer id;
+
     private String name;
+
     private String email;
 
     private Person() {
@@ -26,12 +28,18 @@ public class Person {
         this.email = email;
     }
 
-    public Long getId() {
+    public Person(int id, String name, String email) {
+        this.id = id;
+        this.name = name;
+        this.email = email;
+    }
+
+    public int getId() {
         return id;
     }
 
     // MOCK used to mock creating of a model with a PK
-    public void setId(Long id) {
+    public void setId(int id) {
         this.id = id;
     }
 
