@@ -21,9 +21,10 @@ public interface PersonDAO {
     int insert(@Bind("name") String name, @Bind("email") String email);
 
     @SqlUpdate("UPDATE persons SET name = :name, email = :email WHERE id = :id")
-    int updateById(@Bind("id") long id, @Bind("name") String name, @Bind("email") String email);
+    int updateById(@Bind("id") int id, @Bind("name") String name, @Bind("email") String email);
+
     @SqlQuery("SELECT * FROM persons WHERE id = :id")
-    Person findById(@Bind("id") long id);
+    Person findById(@Bind("id") int id);
 
     @SqlQuery("SELECT * FROM persons WHERE email = :email")
     Person findByEmail(@Bind("email") String email);

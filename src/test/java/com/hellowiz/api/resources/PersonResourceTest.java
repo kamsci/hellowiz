@@ -1,9 +1,11 @@
 package com.hellowiz.api.resources;
 
-import com.hellowiz.api.api.ErrorResponse;
 import com.hellowiz.api.api.Person;
+import com.hellowiz.api.api.errors.ErrorResponse;
 import com.hellowiz.api.db.PersonDAO;
-import com.hellowiz.api.resources.middleware.CustomExceptionMapper;
+import com.hellowiz.api.resources.middleware.DefaultExceptionMapper;
+import com.hellowiz.api.resources.middleware.ExecuteExceptionMapper;
+import com.hellowiz.api.resources.middleware.ViolationExceptionMapper;
 import io.dropwizard.testing.junit5.DropwizardExtensionsSupport;
 import io.dropwizard.testing.junit5.ResourceExtension;
 import jakarta.ws.rs.client.Entity;
@@ -15,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.net.URL;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -22,6 +25,7 @@ import java.util.List;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.oneOf;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(DropwizardExtensionsSupport.class)
@@ -32,7 +36,9 @@ public class PersonResourceTest {
     private static final PersonDAO DAO = mock(PersonDAO.class);
     private static final ResourceExtension EXT = ResourceExtension.builder()
             .addResource(new PersonResource(DAO))
-            .addProvider(CustomExceptionMapper.class)
+            .addProvider(ViolationExceptionMapper.class)
+            .addProvider(ExecuteExceptionMapper.class)
+            .addProvider(DefaultExceptionMapper.class)
             .build();
     private Person person;
 
@@ -52,8 +58,7 @@ public class PersonResourceTest {
         when(DAO.findAll()).thenReturn(Collections.singletonList(person));
 
         final Response response = EXT.target("/persons").request().get();
-        List<Person> found = response.readEntity(new GenericType<List<Person>>() {
-        });
+        List<Person> found = response.readEntity(new GenericType<List<Person>>() {});
 
         assertThat(response.getStatus(), equalTo(Response.Status.OK.getStatusCode()));
         assertThat(found.size(), equalTo(1));
@@ -75,14 +80,14 @@ public class PersonResourceTest {
 
     @Test
     void getPersonByIdNotFound() {
-        when(DAO.findById(2L)).thenReturn(null);
+        when(DAO.findById(2)).thenReturn(null);
         final Response response = EXT.target("/persons/2").request().get();
 
         assertThat(
                 response.getStatusInfo().getStatusCode(),
                 equalTo(Response.Status.NOT_FOUND.getStatusCode())
         );
-        verify(DAO).findById(2L);
+        verify(DAO).findById(2);
     }
 
     @Test
@@ -136,7 +141,7 @@ public class PersonResourceTest {
     void addPersonSuccess() {
         final Response response = EXT.target("/persons")
                 .request()
-                .post(Entity.entity(new Person(testName, testEmail), MediaType.APPLICATION_JSON_TYPE));
+                .post(Entity.entity(new Person.Request(testName, testEmail), MediaType.APPLICATION_JSON_TYPE));
 
         assertThat(response.getStatus(), equalTo(Response.Status.CREATED.getStatusCode()));
 
@@ -152,9 +157,17 @@ public class PersonResourceTest {
 
         assertThat(response.getStatus(), equalTo(Response.Status.BAD_REQUEST.getStatusCode()));
 
-        Person created = response.readEntity(Person.class);
+        ErrorResponse errorResponse = response.readEntity(ErrorResponse.class);
 
-        assertThat(created, is(nullValue()));
+        assertThat(errorResponse.getError(), equalTo("Validation failed"));
+        assertThat(errorResponse.getViolations(), is(notNullValue()));
+        assertThat(errorResponse.getViolations().size(), equalTo(2));
+        errorResponse.getViolations().forEach(violation ->
+            assertThat(
+                violation,
+                oneOf(Person.Request.NAME_NULL_ERROR, Person.Request.EMAIL_NULL_ERROR)
+            )
+        );
         verify(DAO, never()).insert(anyString(), anyString());
     }
 
@@ -163,13 +176,21 @@ public class PersonResourceTest {
 
         final Response response = EXT.target("/persons")
                 .request()
-                .post(Entity.entity(new Person("", ""), MediaType.APPLICATION_JSON_TYPE));
+                .post(Entity.entity(new Person.Request("", ""), MediaType.APPLICATION_JSON_TYPE));
 
         assertThat(response.getStatus(), equalTo(Response.Status.BAD_REQUEST.getStatusCode()));
 
-        Person created = response.readEntity(Person.class);
+        ErrorResponse errorResponse = response.readEntity(ErrorResponse.class);
 
-        assertThat(created, is(nullValue()));
+        assertThat(errorResponse.getError(), equalTo("Validation failed"));
+        assertThat(errorResponse.getViolations(), is(notNullValue()));
+        assertThat(errorResponse.getViolations().size(), equalTo(3));
+        errorResponse.getViolations().forEach(violation ->
+            assertThat(
+                violation,
+                oneOf(Person.Request.NAME_LENGTH_ERROR, Person.Request.EMAIL_LENGTH_ERROR, Person.Request.EMAIL_VALIDATION_ERROR)
+            )
+        );
         verify(DAO, never()).insert(anyString(), anyString());
     }
 
@@ -178,43 +199,72 @@ public class PersonResourceTest {
 
         final Response response = EXT.target("/persons")
                 .request()
-                .post(Entity.entity(new Person(testName, null), MediaType.APPLICATION_JSON_TYPE));
+                .post(
+                    Entity.entity(getClass().getResource("/fixtures/representations/personRequest_EmailNull.json"),
+                    MediaType.APPLICATION_JSON_TYPE));
 
         assertThat(response.getStatus(), equalTo(Response.Status.BAD_REQUEST.getStatusCode()));
 
-        Person created = response.readEntity(Person.class);
-
-        assertThat(created, is(nullValue()));
         verify(DAO, never()).insert(anyString(), anyString());
     }
 
     @Test
-    void addPersonBadRequest_MissingName() {
-
+    void addPersonBadRequest_EmailNull() {
         final Response response = EXT.target("/persons")
-                .request()
-                .post(Entity.entity(new Person(null, testEmail), MediaType.APPLICATION_JSON_TYPE));
+            .request()
+            .post(Entity.entity(
+                new Person.Request(testName, null),
+                MediaType.APPLICATION_JSON_TYPE));
 
         assertThat(response.getStatus(), equalTo(Response.Status.BAD_REQUEST.getStatusCode()));
 
-        Person created = response.readEntity(Person.class);
+        ErrorResponse errorResponse = response.readEntity(ErrorResponse.class);
 
-        assertThat(created, is(nullValue()));
+        assertThat(errorResponse.getError(), equalTo("Validation failed"));
+        assertThat(errorResponse.getViolations(), is(notNullValue()));
+        assertThat(errorResponse.getViolations().size(), equalTo(1));
+        assertThat(
+            errorResponse.getViolations().contains(Person.Request.EMAIL_NULL_ERROR),
+            is(true)
+        );
+        verify(DAO, never()).insert(anyString(), anyString());
+    }
+
+    @Test
+    void addPersonBadRequest_NameNull() {
+
+        final Response response = EXT.target("/persons")
+                .request()
+                .post(Entity.entity(new Person.Request(null, testEmail), MediaType.APPLICATION_JSON_TYPE));
+
+        assertThat(response.getStatus(), equalTo(Response.Status.BAD_REQUEST.getStatusCode()));
+
+        ErrorResponse errorResponse = response.readEntity(ErrorResponse.class);
+
+        assertThat(errorResponse.getError(), equalTo("Validation failed"));
+        assertThat(errorResponse.getViolations(), is(notNullValue()));
+        assertThat(errorResponse.getViolations().size(), equalTo(1));
+        assertThat(
+            errorResponse.getViolations().contains(Person.Request.NAME_NULL_ERROR),
+            is(true)
+        );
         verify(DAO, never()).insert(anyString(), anyString());
     }
 
     @Test
     void updatePersonSuccess() {
         String updatedName = "Samantha";
-        Person updatedPerson = person;
-        updatedPerson.setName(updatedName);
 
         when(DAO.findById(eq(testId))).thenReturn(person);
-        when(DAO.updateById(eq(testId), eq(updatedName), eq(""))).thenReturn(1);
+        when(DAO.updateById(eq(testId), eq(updatedName), eq(testEmail))).thenReturn(1);
 
         final Response response = EXT.target("/persons/" + testId)
                 .request()
-                .put(Entity.entity(new Person(updatedName, ""), MediaType.APPLICATION_JSON_TYPE));
+//                    .put(
+//                        Entity.entity(
+//                            getClass().getResource("/fixtures/representations/personRequest.json"),
+//                            MediaType.APPLICATION_JSON_TYPE));
+                .put(Entity.entity(new Person.Request(updatedName, testEmail), MediaType.APPLICATION_JSON_TYPE));
 
         assertThat(response.getStatus(), equalTo(Response.Status.OK.getStatusCode()));
 
@@ -222,22 +272,28 @@ public class PersonResourceTest {
 
         assertThat(updated, equalTo(1));
         verify(DAO).findById(eq(testId));
-        verify(DAO).updateById(eq(testId), eq(updatedName), eq(""));
+        verify(DAO).updateById(eq(testId), eq(updatedName), eq(testEmail));
     }
 
     @Test
     void updatePersonBadRequest_Body() {
         final Response response = EXT.target("/persons/" + testId)
                 .request()
-                .put(Entity.entity(new Person(null, null), MediaType.APPLICATION_JSON_TYPE));
+                .put(Entity.entity(new Person.Request(null, null), MediaType.APPLICATION_JSON_TYPE));
 
-        assertThat(response.getStatus(), equalTo(Response.Status.BAD_REQUEST.getStatusCode()));
+        ErrorResponse errorResponse = response.readEntity(ErrorResponse.class);
 
-        String updateMessage = response.readEntity(String.class);
-
-        assertThat(updateMessage, equalTo(PersonResource.ERROR_NO_VALID_FIELDS));
-        verify(DAO, never()).updateById(anyLong(), anyString(), anyString());
-        verify(DAO, never()).findById(anyLong());
+        assertThat(errorResponse.getError(), equalTo("Validation failed"));
+        assertThat(errorResponse.getViolations(), is(notNullValue()));
+        assertThat(errorResponse.getViolations().size(), equalTo(2));
+        errorResponse.getViolations().forEach(violation ->
+            assertThat(
+                violation,
+                oneOf(Person.Request.NAME_NULL_ERROR, Person.Request.EMAIL_NULL_ERROR)
+            )
+        );
+        verify(DAO, never()).updateById(anyInt(), anyString(), anyString());
+        verify(DAO, never()).findById(anyInt());
     }
 
     @Test
@@ -245,15 +301,15 @@ public class PersonResourceTest {
         String updatedEmail = "Sam@newemail.com";
         final Response response = EXT.target("/persons/0")
                 .request()
-                .put(Entity.entity(new Person("", updatedEmail), MediaType.APPLICATION_JSON_TYPE));
+                .put(Entity.entity(new Person.Request("", updatedEmail), MediaType.APPLICATION_JSON_TYPE));
 
         assertThat(response.getStatus(), equalTo(Response.Status.BAD_REQUEST.getStatusCode()));
 
         String updateMessage = response.readEntity(String.class);
 
         assertThat(updateMessage, equalTo(PersonResource.ERROR_INVALID_ID));
-        verify(DAO, never()).updateById(anyLong(), anyString(), anyString());
-        verify(DAO, never()).findById(anyLong());
+        verify(DAO, never()).updateById(anyInt(), anyString(), anyString());
+        verify(DAO, never()).findById(anyInt());
     }
 
     @Test
@@ -263,15 +319,15 @@ public class PersonResourceTest {
 
         final Response response = EXT.target("/persons/" + "2")
                 .request()
-                .put(Entity.entity(new Person(updatedName, ""), MediaType.APPLICATION_JSON_TYPE));
+                .put(Entity.entity(new Person.Request(updatedName, testEmail), MediaType.APPLICATION_JSON_TYPE));
 
         assertThat(response.getStatus(), equalTo(Response.Status.NOT_FOUND.getStatusCode()));
 
         String updateMessage = response.readEntity(String.class);
 
         assertThat(updateMessage, equalTo(PersonResource.ERROR_ID_NOT_FOUND));
-        verify(DAO).findById(eq(2L));
-        verify(DAO, never()).updateById(anyLong(), anyString(), anyString());
+        verify(DAO).findById(eq(2));
+        verify(DAO, never()).updateById(anyInt(), anyString(), anyString());
     }
 
     @Test
@@ -293,8 +349,8 @@ public class PersonResourceTest {
 
         String updateMessage = response.readEntity(String.class);
 
-        assertThat(updateMessage, equalTo(PersonResource.ERROR_INVALID_ID));;
-        verify(DAO, never()).findById(anyLong());
+        assertThat(updateMessage, equalTo(PersonResource.ERROR_INVALID_ID));
+        verify(DAO, never()).findById(anyInt());
         verify(DAO, never()).deleteById(eq(testId));
     }
 }

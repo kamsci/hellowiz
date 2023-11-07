@@ -17,7 +17,7 @@ public class PersonSupport {
     public static String createdEmail = "kali@e.io";
 
     public static void withPersonsDao(Consumer<PersonDAO> jdbiConsumer, boolean createPerson) throws Exception {
-            DatabaseSupport.withDatabase(jdbi -> {
+            DatabaseSupport.withPgDatabase(jdbi -> {
                 try {
                     jdbi.registerRowMapper(new PersonMapper());
                     PersonDAO personDAO = jdbi.onDemand(PersonDAO.class);

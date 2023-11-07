@@ -13,8 +13,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 public class PersonDaoTest {
 
-    private String testName = "Sam";
-    private String testEmail = "s@email.com";
+    private final String testName = "Sam";
+    private final String testEmail = "s@email.com";
 
     @Before
     public void setUp() {

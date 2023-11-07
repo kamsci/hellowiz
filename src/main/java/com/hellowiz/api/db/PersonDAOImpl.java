@@ -39,12 +39,12 @@ public class PersonDAOImpl implements PersonDAO{
     }
 
     @Override
-    public int updateById(long id, String name, String email) {
+    public int updateById(int id, String name, String email) {
         return 0;
     }
 
     @Override
-    public Person findById(long id) {
+    public Person findById(int id) {
         return jdbi.withHandle(handle -> handle.createQuery("SELECT * FROM persons WHERE id = :id")
                 .bind("id", id)
                 .mapToBean(Person.class)

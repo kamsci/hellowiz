@@ -42,18 +42,17 @@ public class PersonInMemory implements PersonDAO {
     }
 
     @Override
-    public int updateById(long id, String name, String email) {
+    public int updateById(int id, String name, String email) {
         if (mockDB.containsKey(id)) {
-            Person existingPerson = mockDB.get(id);
-            Person personChanges = new Person(name, email);
-            existingPerson.update(personChanges);
+            Person personChanges = new Person(id, name, email);
+            mockDB.put(id, personChanges);
             return 1;
         }
         return 0;
     }
 
     @Override
-    public Person findById(long id) {
+    public Person findById(int id) {
         return mockDB.get(id);
     }
 
